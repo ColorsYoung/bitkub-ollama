@@ -4,6 +4,7 @@ import json
 import time
 import requests
 import logging
+import os
 
 class BitkubAPI:
     def __init__(self, api_key=None, api_secret=None):
@@ -21,8 +22,15 @@ class BitkubAPI:
                 return f"{quote}_{base}"
         return symbol
 
+    def _format_number(self, value):
+        if value == 0:
+            return 0
+        s = f"{value:.10f}".rstrip('0').rstrip('.')
+        if '.' not in s:
+            return int(s)
+        return float(s)
+
     def _generate_signature(self, timestamp, method, path, body, api_secret):
-        # Bitkub v3: HMAC-SHA256(timestamp + method + path + body, secret)
         payload = str(timestamp) + method.upper() + path + (body or "")
         signature = hmac.new(
             api_secret.encode('utf-8'),
@@ -39,8 +47,12 @@ class BitkubAPI:
                 raise ValueError("API Key and Secret are required for private endpoints")
             
             timestamp = int(time.time() * 1000)
-            body = json.dumps(payload, separators=(',', ':')) if payload else ""
+            # Ensure payload numbers are formatted if it's an order placement
+            if payload and ('amt' in payload or 'rat' in payload):
+                if 'amt' in payload: payload['amt'] = self._format_number(payload['amt'])
+                if 'rat' in payload: payload['rat'] = self._format_number(payload['rat'])
             
+            body = json.dumps(payload, separators=(',', ':')) if payload else ""
             signature = self._generate_signature(timestamp, method, endpoint, body, self.api_secret)
             
             headers = {
@@ -50,6 +62,10 @@ class BitkubAPI:
                 'X-BTK-TIMESTAMP': str(timestamp),
                 'X-BTK-SIGN': signature
             }
+            
+            self.logger.debug(f"Request Endpoint: {endpoint}")
+            self.logger.debug(f"Request Headers: {headers}")
+            self.logger.debug(f"Request Body: {body}")
             
             if method.upper() == 'POST':
                 response = requests.post(url, headers=headers, data=body)
@@ -77,7 +93,10 @@ class BitkubAPI:
             return None
 
     def get_ticker(self, symbol=None):
-        params = {'sym': self._format_symbol(symbol)} if symbol else {}
+        # Ticker sym parameter likes lowercase in v3/v2? 
+        # But we saw it works better without sym or with btc_thb.
+        # Let's use lowercase for the sym parameter.
+        params = {'sym': self._format_symbol(symbol).lower()} if symbol else {}
         return self._request('GET', '/api/market/ticker', params=params)
 
     def get_candles(self, symbol, timeframe, limit=100):
@@ -111,25 +130,22 @@ class BitkubAPI:
         return {'error': 0, 'result': ohlcv}
 
     def get_wallet(self):
-        # Use v3 endpoint
         return self._request('POST', '/api/v3/market/wallet', private=True)
 
     def place_bid(self, symbol, amount, rate, order_type='market'):
-        # Use v3 endpoint
         payload = {
             'sym': self._format_symbol(symbol),
-            'amt': float(amount),
-            'rat': float(rate),
+            'amt': amount,
+            'rat': rate,
             'typ': order_type
         }
         return self._request('POST', '/api/v3/market/place-bid', payload=payload, private=True)
 
     def place_ask(self, symbol, amount, rate, order_type='market'):
-        # Use v3 endpoint
         payload = {
             'sym': self._format_symbol(symbol),
-            'amt': float(amount),
-            'rat': float(rate),
+            'amt': amount,
+            'rat': rate,
             'typ': order_type
         }
         return self._request('POST', '/api/v3/market/place-ask', payload=payload, private=True)
