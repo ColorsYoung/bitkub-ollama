@@ -6,33 +6,39 @@ class ExecutionEngine:
         self.symbol = symbol # e.g. BTC/THB
         self.api = BitkubAPI(api_key, api_secret)
         self.logger = logging.getLogger(__name__)
+        self.state_file = "trade_state.json"
+        self.state = self._load_state()
 
-    def get_balance(self):
-        try:
-            # BitkubAPI._request already returns the 'result' part (the balances)
-            # or None if an error occurred.
-            balances = self.api.get_wallet()
-            if balances:
-                thb = balances.get('THB', 0)
-                self.logger.info(f"Balance Check: {thb} THB available.")
-                return balances
-            
-            self.logger.error("Failed to fetch balance from Bitkub.")
-            return None
-        except Exception as e:
-            self.logger.error(f"Exception during balance check: {e}")
-            return None
+    def _load_state(self):
+        import json
+        import os
+        if os.path.exists(self.state_file):
+            with open(self.state_file, 'r') as f:
+                return json.load(f)
+        return {"last_buy_price": 0, "in_position": False}
 
-    def execute_trade(self, decision, amount_thb):
+    def _save_state(self):
+        import json
+        with open(self.state_file, 'w') as f:
+            json.dump(self.state, f)
+
+    def execute_trade(self, decision, amount_thb, current_price):
         action = decision.get("action").upper()
         confidence = decision.get("confidence_score")
         
-        # Asymmetrical Thresholds: Be picky with BUY (80%), but quick with SELL (50%).
+        # 1. Take Profit Check (Hard Logic: 5% Gain)
+        if self.state["in_position"] and self.state["last_buy_price"] > 0:
+            profit_pct = ((current_price - self.state["last_buy_price"]) / self.state["last_buy_price"]) * 100
+            if profit_pct >= 5.0:
+                self.logger.info(f"✨ TAKE PROFIT TRIGGERED! Profit: {profit_pct:.2f}% | Entry: {self.state['last_buy_price']} | Current: {current_price}")
+                return self.sell_market()
+
+        # 2. Asymmetrical Thresholds for AI Signals
         if action == "BUY":
             if confidence < 80:
                 self.logger.info(f"Entry Signal Ignored: BUY confidence ({confidence}%) < 80 threshold.")
                 return None
-            return self.buy_market(amount_thb)
+            return self.buy_market(amount_thb, current_price)
             
         elif action == "SELL":
             if confidence < 50:
@@ -44,7 +50,20 @@ class ExecutionEngine:
             self.logger.info("Decision is HOLD. Monitoring market...")
             return None
 
-    def buy_market(self, amount_thb):
+    def get_balance(self):
+        try:
+            balances = self.api.get_wallet()
+            if balances:
+                thb = balances.get('THB', 0)
+                self.logger.info(f"Balance Check: {thb} THB available.")
+                return balances
+            self.logger.error("Failed to fetch balance from Bitkub.")
+            return None
+        except Exception as e:
+            self.logger.error(f"Exception during balance check: {e}")
+            return None
+
+    def buy_market(self, amount_thb, current_price):
         try:
             balance = self.get_balance()
             if balance is None: return None
@@ -55,8 +74,12 @@ class ExecutionEngine:
                 return None
 
             self.logger.info(f"Executing BUY Market Order for {amount_thb} THB of {self.symbol}")
-            # Bitkub market buy: amt is THB
             order = self.api.place_bid(self.symbol, amount_thb, 0, 'market')
+            
+            if order:
+                self.state["last_buy_price"] = current_price
+                self.state["in_position"] = True
+                self._save_state()
             return order
         except Exception as e:
             self.logger.error(f"Error executing BUY order: {e}")
@@ -64,7 +87,6 @@ class ExecutionEngine:
 
     def sell_market(self):
         try:
-            # Extract coin symbol from TRADING_SYMBOL (e.g., BTC/THB -> BTC)
             coin = self.symbol.split('/')[0]
             balance = self.get_balance()
             if balance is None: return None
@@ -75,8 +97,12 @@ class ExecutionEngine:
                 return None
 
             self.logger.info(f"Executing SELL Market Order for {coin_balance} {coin}")
-            # Bitkub market sell: amt is coin amount
             order = self.api.place_ask(self.symbol, coin_balance, 0, 'market')
+            
+            if order:
+                self.state["last_buy_price"] = 0
+                self.state["in_position"] = False
+                self._save_state()
             return order
         except Exception as e:
             self.logger.error(f"Error executing SELL order: {e}")

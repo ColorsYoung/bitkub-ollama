@@ -70,7 +70,7 @@ def run_bot():
 
             # 4. Execute Trade
             if settings.BITKUB_API_KEY and settings.BITKUB_API_SECRET:
-                order = execution_engine.execute_trade(decision, settings.TRADE_AMOUNT_THB)
+                order = execution_engine.execute_trade(decision, settings.TRADE_AMOUNT_THB, latest_price)
                 if order:
                     logger.info(f"Order Executed Successfully: {order['id']}")
             else:
