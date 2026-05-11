@@ -51,14 +51,18 @@ class MarketEngine:
 
         latest = df.iloc[-1]
         prev = df.iloc[-2]
+        avg_volume = df['volume'].tail(24).mean() # 24h average volume
         
         summary = (
             f"Market Summary for {self.symbol} ({self.timeframe}):\n"
             f"Current Price: {latest['close']}\n"
-            f"RSI: {latest['rsi']:.2f}\n"
-            f"EMA 9: {latest['ema_9']:.2f}, EMA 21: {latest['ema_21']:.2f}\n"
-            f"MACD: {latest['MACD_12_26_9']:.2f}, Signal: {latest['MACDs_12_26_9']:.2f}\n"
             f"Previous Close: {prev['close']}\n"
             f"Price Change: {latest['close'] - prev['close']:.2f}\n"
+            f"RSI (14): {latest['rsi']:.2f}\n"
+            f"EMA 9: {latest['ema_9']:.2f}, EMA 21: {latest['ema_21']:.2f}\n"
+            f"Trend Status: {'UP' if latest['ema_9'] > latest['ema_21'] else 'DOWN'}\n"
+            f"MACD: {latest['MACD_12_26_9']:.2f}, Signal: {latest['MACDs_12_26_9']:.2f}\n"
+            f"Current Volume: {latest['volume']:.4f}, 24h Avg Volume: {avg_volume:.4f}\n"
+            f"Volume Status: {'High' if latest['volume'] > avg_volume * 1.5 else 'Normal'}\n"
         )
         return summary

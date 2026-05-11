@@ -4,7 +4,7 @@ import logging
 import os
 
 class AIEngine:
-    def __init__(self, ollama_url, model=None, timeout=30, temperature=0.2, top_p=0.9, num_predict=256):
+    def __init__(self, ollama_url, model=None, timeout=30, temperature=0.6, top_p=0.9, num_predict=256):
         self.url = f"{ollama_url}/api/generate"
         self.model = model or os.environ.get("OLLAMA_MODEL", "llama3.1:8b")
         self.timeout = timeout
@@ -18,26 +18,32 @@ class AIEngine:
             raise ValueError("market_summary is empty or None")
             
         prompt = f"""
-        Market Data Input:
+        Market Data Input (1-HOUR TIMEFRAME):
         {market_summary}
 
-        Analysis Strategy:
-        1. Trend Analysis: Check if Current Price > EMA 9 > EMA 21 (Strong Uptrend) or Price < EMA 9 < EMA 21 (Strong Downtrend).
-        2. Momentum: RSI < 30 is deep oversold (Buy potential), RSI > 70 is overbought (Sell potential). RSI crossing 50 indicates momentum shift.
-        3. Convergence: Look for MACD crossing the Signal line. A positive histogram growth confirms bullish strength.
-        4. Volatility: Compare Price Change with EMAs to see if the move is a breakout or just noise.
+        Active Trading Strategy for 1h Timeframe:
+        1. Trend Following: If Trend Status is UP, prioritize BUY entries.
+        2. Momentum: If MACD is above Signal and Histogram is increasing, momentum is strong.
+        3. Price Action: If Current Price > EMA 9 and Trend is UP, the trend is aggressive.
+        4. RSI Context: Use RSI only as a warning. RSI > 75 is overbought (risk), but RSI 50-65 is normal in a strong trend.
 
         Decision Rules:
-        - BUY: Only if at least 2 indicators show bullish reversal (e.g., RSI rising from 30 + MACD Bullish Cross).
-        - SELL: Only if trend breaks (Price below EMA 21) or RSI is exhausted (>70).
-        - HOLD: If signals are conflicting or momentum is neutral (RSI between 40-60).
-        - If any indicator value is missing, unavailable, or cannot be calculated, default action must be HOLD with a confidence_score below 30.
+        - BUY: 
+            a) Trend is UP + MACD is Bullish + Current Price > EMA 9 (Ride the wave).
+            b) Trend is UP + RSI is 40-55 (Buy the dip).
+            c) Trend is DOWN -> UP reversal confirmed by MACD Cross + Volume.
+        - SELL:
+            a) Trend is UP -> DOWN shift (Trend break).
+            b) Trend is UP + RSI > 75 + MACD Bearish Cross (Take profit).
+            c) Current Price < EMA 21 in any trend (Risk management).
+        - HOLD: 
+            - Sideways movement (Price between EMA 9 and EMA 21).
+            - Very low Volume and no MACD direction.
 
         Requirement:
         - Respond ONLY in valid JSON.
         - confidence_score must be 0-100.
-        - reasoning must explain the 'Why' based on the indicators above.
-        - reasoning must be a single concise sentence, no longer than 50 words.
+        - reasoning must be a single concise sentence.
 
         Response Format:
         {{
@@ -50,7 +56,7 @@ class AIEngine:
         try:
             payload = {
                 "model": self.model,
-                "system": "You are a Senior Quantitative Crypto Trader. Analyze the market data for BTC/THB and provide a high-probability trade signal.",
+                "system": "You are a Momentum-focused 1-hour Swing Trader. Your goal is to capture trends and ride momentum. You prioritize MACD and Price relative to EMAs. You are decisive and less conservative than a daily trader.",
                 "prompt": prompt,
                 "stream": False,
                 "format": "json",

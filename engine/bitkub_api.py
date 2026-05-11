@@ -16,10 +16,8 @@ class BitkubAPI:
     def _format_symbol(self, symbol, for_tv=False):
         if '/' in symbol:
             base, quote = symbol.split('/')
-            if for_tv:
-                return f"{base}_{quote}"
-            else:
-                return f"{quote}_{base}"
+            # Bitkub v3 and TradingView both use BASE_QUOTE (e.g. BTC_THB)
+            return f"{base}_{quote}"
         return symbol
 
     def _format_number(self, value):

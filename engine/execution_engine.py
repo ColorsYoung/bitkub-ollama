@@ -9,20 +9,25 @@ class ExecutionEngine:
 
     def get_balance(self):
         try:
-            response = self.api.get_wallet()
-            if response and response.get('error') == 0:
-                # Bitkub wallet format: {"error":0,"result":{"THB":100,"BTC":0.001}}
-                return response.get('result', {})
+            # BitkubAPI._request already returns the 'result' part (the balances)
+            # or None if an error occurred.
+            balances = self.api.get_wallet()
+            if balances:
+                thb = balances.get('THB', 0)
+                self.logger.info(f"Balance Check: {thb} THB available.")
+                return balances
+            
+            self.logger.error("Failed to fetch balance from Bitkub.")
             return None
         except Exception as e:
-            self.logger.error(f"Error fetching balance: {e}")
+            self.logger.error(f"Exception during balance check: {e}")
             return None
 
     def execute_trade(self, decision, amount_thb):
         action = decision.get("action").upper()
         confidence = decision.get("confidence_score")
         
-        if confidence < 70:
+        if confidence < 60:
             self.logger.info(f"Low confidence ({confidence}). Skipping {action}.")
             return None
 
