@@ -18,34 +18,51 @@ class AIEngine:
             raise ValueError("market_summary is empty or None")
             
         prompt = f"""
-        Market Data Input (1-HOUR TIMEFRAME):
+        [CONTEXT: QUANTITATIVE TRADING ANALYSIS]
+        TIME INTERVAL: 1-HOUR (H1)
+        STRATEGY: MOMENTUM & TREND SWING TRADING
+        
+        [MARKET DATA INPUT]
         {market_summary}
 
-        Active Trading Strategy for 1h Timeframe:
-        1. Trend Following: If Trend Status is UP, prioritize BUY entries.
-        2. Momentum: If MACD is above Signal and Histogram is increasing, momentum is strong.
-        3. Price Action: If Current Price > EMA 9 and Trend is UP, the trend is aggressive.
-        4. RSI Context: Use RSI only as a warning. RSI > 75 is overbought (risk), but RSI 50-65 is normal in a strong trend.
+        [ANALYSIS PROTOCOL]
+        1. TREND IDENTIFICATION:
+           - BULLISH: Price > EMA 9 > EMA 21.
+           - BEARISH: Price < EMA 9 < EMA 21.
+           - CONSOLIDATION: Price oscillating between EMA 9 and EMA 21.
 
-        Decision Rules:
-        - BUY: 
-            a) Trend is UP + MACD is Bullish + Current Price > EMA 9 (Ride the wave).
-            b) Trend is UP + RSI is 40-55 (Buy the dip).
-            c) Trend is DOWN -> UP reversal confirmed by MACD Cross + Volume.
-        - SELL:
-            a) Trend is UP -> DOWN shift (Trend break).
-            b) Trend is UP + RSI > 75 + MACD Bearish Cross (Take profit).
-            c) Current Price < EMA 21 in any trend (Risk management).
-        - HOLD: 
-            - Sideways movement (Price between EMA 9 and EMA 21).
-            - Very low Volume and no MACD direction.
+        2. MOMENTUM VERIFICATION (MACD):
+           - STRONG BULLISH: MACD > Signal AND Histogram is positive and expanding.
+           - BULLISH EXHAUSTION: MACD > Signal BUT Histogram is shrinking.
+           - BEARISH REVERSAL: MACD crosses below Signal.
 
-        Requirement:
-        - Respond ONLY in valid JSON.
-        - confidence_score must be 0-100.
-        - reasoning must be a single concise sentence.
+        3. VOLUME & PRICE ACTION:
+           - VALIDATION: Price moves must be backed by 'High' Volume Status.
+           - DIVERGENCE: Check if RSI is making lower highs while Price makes higher highs (Warning).
 
-        Response Format:
+        4. RISK ASSESSMENT:
+           - OVERBOUGHT: RSI > 70 (Exercise caution for BUY).
+           - OVERSOLD: RSI < 30 (Exercise caution for SELL).
+           - OVEREXTENDED: Price is > 5% away from EMA 21 (Reversion risk).
+
+        [DECISION MATRIX]
+        - ACTION "BUY": 
+            - Trend Status is UP + MACD Bullish Crossover + Current Price > EMA 9.
+            - OR: Trend reversal from DOWN to UP confirmed by High Volume and MACD.
+        - ACTION "SELL":
+            - Trend Status is DOWN + MACD Bearish Crossover + Current Price < EMA 9.
+            - OR: Price breaks below EMA 21 (Stop loss condition).
+            - OR: RSI > 75 with Bearish MACD Histogram (Take profit condition).
+        - ACTION "HOLD":
+            - Low Volume + Neutral MACD.
+            - RSI in 45-55 zone without clear EMA direction.
+            - Price is in 'No Man's Land' (between EMA 9 and 21).
+
+        [OUTPUT SPECIFICATION]
+        - You must output ONLY a valid JSON object.
+        - confidence_score: (0-100) based on how many criteria are met.
+        - reasoning: Concise technical justification (max 15 words).
+
         {{
             "action": "BUY/SELL/HOLD",
             "confidence_score": integer,
@@ -56,7 +73,7 @@ class AIEngine:
         try:
             payload = {
                 "model": self.model,
-                "system": "You are a Momentum-focused 1-hour Swing Trader. Your goal is to capture trends and ride momentum. You prioritize MACD and Price relative to EMAs. You are decisive and less conservative than a daily trader.",
+                "system": "You are a Senior Quantitative Trader specializing in H1 momentum strategies. You are precise, clinical, and data-driven. You prioritize trend alignment and volume confirmation. You never provide advice, only execution decisions based on the provided matrix.",
                 "prompt": prompt,
                 "stream": False,
                 "format": "json",
