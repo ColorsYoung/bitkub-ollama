@@ -11,5 +11,7 @@ class Settings:
     TIMEFRAME = os.getenv("TIMEFRAME", "1h")
     TRADE_AMOUNT_THB = float(os.getenv("TRADE_AMOUNT_THB", 100))
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+    LINE_CHANNEL_ACCESS_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
+    LINE_USER_ID = os.getenv("LINE_USER_ID")
 
 settings = Settings()

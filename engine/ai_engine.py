@@ -19,8 +19,8 @@ class AIEngine:
             
         prompt = f"""
         [CONTEXT: QUANTITATIVE TRADING ANALYSIS]
-        TIME INTERVAL: 1-HOUR (H1)
-        STRATEGY: MOMENTUM & TREND SWING TRADING
+        TIME INTERVAL: 5-MINUTE (M5)
+        STRATEGY: SCALPING & QUICK MOMENTUM
         
         [MARKET DATA INPUT]
         {market_summary}
@@ -43,25 +43,24 @@ class AIEngine:
         4. RISK ASSESSMENT:
            - OVERBOUGHT: RSI > 70 (Exercise caution for BUY).
            - OVERSOLD: RSI < 30 (Exercise caution for SELL).
-           - OVEREXTENDED: Price is > 5% away from EMA 21 (Reversion risk).
+           - OVEREXTENDED: Price is > 1% away from EMA 21 (Reversion risk for M5).
 
         [DECISION MATRIX]
         - ACTION "BUY": 
             - Trend Status is UP + MACD Bullish Crossover + Current Price > EMA 9.
-            - OR: Trend reversal from DOWN to UP confirmed by High Volume and MACD.
+            - OR: Quick reversal confirmed by High Volume and positive Histogram.
         - ACTION "SELL":
             - Trend Status is DOWN + MACD Bearish Crossover + Current Price < EMA 9.
-            - OR: Price breaks below EMA 21 (Stop loss condition).
-            - OR: RSI > 75 with Bearish MACD Histogram (Take profit condition).
+            - EMERGENCY EXIT: Price breaks below EMA 21 or MACD Bearish Cross happens while Trend is UP (Lock profits/Minimize loss).
+            - OR: RSI > 75 with shrinking Histogram.
         - ACTION "HOLD":
             - Low Volume + Neutral MACD.
-            - RSI in 45-55 zone without clear EMA direction.
-            - Price is in 'No Man's Land' (between EMA 9 and 21).
+            - Price is overlapping EMA 9 and 21.
 
         [OUTPUT SPECIFICATION]
         - You must output ONLY a valid JSON object.
-        - confidence_score: (0-100) based on how many criteria are met.
-        - reasoning: Concise technical justification (max 15 words).
+        - confidence_score: (0-100). Assign >= 80 ONLY if multiple factors (Trend + Momentum + Volume) align perfectly.
+        - reasoning: Concise technical justification (max 12 words).
 
         {{
             "action": "BUY/SELL/HOLD",
@@ -73,7 +72,7 @@ class AIEngine:
         try:
             payload = {
                 "model": self.model,
-                "system": "You are a Senior Quantitative Trader specializing in H1 momentum strategies. You are precise, clinical, and data-driven. You prioritize trend alignment and volume confirmation. You never provide advice, only execution decisions based on the provided matrix.",
+                "system": "You are a highly conservative Scalping Specialist. You only take high-probability trades where at least 3 indicators align. You are precise and refuse to guess. If signals are mixed, assign a low confidence score and recommend HOLD.",
                 "prompt": prompt,
                 "stream": False,
                 "format": "json",

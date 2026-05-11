@@ -27,16 +27,21 @@ class ExecutionEngine:
         action = decision.get("action").upper()
         confidence = decision.get("confidence_score")
         
-        if confidence < 60:
-            self.logger.info(f"Low confidence ({confidence}). Skipping {action}.")
-            return None
-
+        # Asymmetrical Thresholds: Be picky with BUY (80%), but quick with SELL (50%).
         if action == "BUY":
+            if confidence < 80:
+                self.logger.info(f"Entry Signal Ignored: BUY confidence ({confidence}%) < 80 threshold.")
+                return None
             return self.buy_market(amount_thb)
+            
         elif action == "SELL":
+            if confidence < 50:
+                self.logger.info(f"Exit Signal Ignored: SELL confidence ({confidence}%) < 50 threshold.")
+                return None
             return self.sell_market()
+            
         else:
-            self.logger.info("Decision is HOLD. No action taken.")
+            self.logger.info("Decision is HOLD. Monitoring market...")
             return None
 
     def buy_market(self, amount_thb):
