@@ -26,21 +26,35 @@ class ExecutionEngine:
         action = decision.get("action").upper()
         confidence = decision.get("confidence_score")
         
-        # 1. Take Profit Check (Hard Logic: 5% Gain)
+        # 1. Dynamic Take Profit (Trailing 5%+)
         if self.state["in_position"] and self.state["last_buy_price"] > 0:
             profit_pct = ((current_price - self.state["last_buy_price"]) / self.state["last_buy_price"]) * 100
+            
+            # If we hit the 5% target
             if profit_pct >= 5.0:
-                self.logger.info(f"✨ TAKE PROFIT TRIGGERED! Profit: {profit_pct:.2f}% | Entry: {self.state['last_buy_price']} | Current: {current_price}")
-                return self.sell_market()
+                # Check if we should exit now or Let Profit Run
+                # Exit if: AI says SELL OR (AI says HOLD and confidence is low/mixed)
+                if action == "SELL":
+                    self.logger.info(f"💰 PROFIT TARGET MET & SELL SIGNAL: Profit {profit_pct:.2f}% | Executing Exit.")
+                    return self.sell_market()
+                elif action == "HOLD":
+                    # If AI is uncertain at 5%+, we take the profit to be safe
+                    self.logger.info(f"⚖️ PROFIT TARGET MET & MOMENTUM NEUTRAL: Profit {profit_pct:.2f}% | Locking in gains.")
+                    return self.sell_market()
+                else:
+                    # action is BUY (meaning AI is still very bullish)
+                    self.logger.info(f"🚀 PROFIT TARGET MET ({profit_pct:.2f}%) but AI is BULLISH. Trailing for more gains...")
+                    # We continue to HOLD
 
         # 2. Asymmetrical Thresholds for AI Signals
         if action == "BUY":
-            if confidence < 80:
-                self.logger.info(f"Entry Signal Ignored: BUY confidence ({confidence}%) < 80 threshold.")
+            if confidence < 70:
+                self.logger.info(f"Entry Signal Ignored: BUY confidence ({confidence}%) < 70 threshold.")
                 return None
             return self.buy_market(amount_thb, current_price)
             
         elif action == "SELL":
+            # Normal exit signal from AI (even if profit < 5% or it's a loss)
             if confidence < 50:
                 self.logger.info(f"Exit Signal Ignored: SELL confidence ({confidence}%) < 50 threshold.")
                 return None

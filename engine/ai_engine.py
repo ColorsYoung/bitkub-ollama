@@ -47,19 +47,19 @@ class AIEngine:
 
         [DECISION MATRIX]
         - ACTION "BUY": 
-            - Trend Status is UP + MACD Bullish Crossover + Current Price > EMA 9.
-            - OR: Quick reversal confirmed by High Volume and positive Histogram.
+            - PRIMARY: Trend Status is UP + MACD Bullish Crossover + Price > EMA 9.
+            - SCALPING (Aggressive): RSI < 35 (Oversold) + High Volume + Histogram increasing (turning positive) even if Trend is still DOWN.
         - ACTION "SELL":
             - Trend Status is DOWN + MACD Bearish Crossover + Current Price < EMA 9.
-            - EMERGENCY EXIT: Price breaks below EMA 21 or MACD Bearish Cross happens while Trend is UP (Lock profits/Minimize loss).
-            - OR: RSI > 75 with shrinking Histogram.
+            - EMERGENCY EXIT: Price breaks below EMA 21 or MACD Bearish Cross happens while Trend is UP.
+            - NOTE: A hard 5% Take Profit is also active in the system, so focus on entering high-momentum moves.
         - ACTION "HOLD":
             - Low Volume + Neutral MACD.
             - Price is overlapping EMA 9 and 21.
 
         [OUTPUT SPECIFICATION]
         - You must output ONLY a valid JSON object.
-        - confidence_score: (0-100). Assign >= 80 ONLY if multiple factors (Trend + Momentum + Volume) align perfectly.
+        - confidence_score: (0-100). Assign >= 70 ONLY if signals (Trend + Momentum + Volume) align well.
         - reasoning: Concise technical justification (max 12 words).
 
         {{
@@ -72,7 +72,7 @@ class AIEngine:
         try:
             payload = {
                 "model": self.model,
-                "system": "You are a highly conservative Scalping Specialist. You only take high-probability trades where at least 3 indicators align. You are precise and refuse to guess. If signals are mixed, assign a low confidence score and recommend HOLD.",
+                "system": "You are an opportunistic but disciplined Scalping Specialist. You seek high-probability entry points. You are willing to trade on oversold reversals if volume is high. If signals are mixed, assign a low confidence score and recommend HOLD.",
                 "prompt": prompt,
                 "stream": False,
                 "format": "json",
