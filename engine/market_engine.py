@@ -1,4 +1,6 @@
+from config.settings import settings
 from engine.bitkub_api import BitkubAPI
+from engine.binance_api import BinanceAPI
 import pandas as pd
 import pandas_ta as ta
 import logging
@@ -7,7 +9,10 @@ class MarketEngine:
     def __init__(self, symbol, timeframe):
         self.symbol = symbol # e.g. BTC/THB
         self.timeframe = timeframe
-        self.api = BitkubAPI()
+        if settings.EXCHANGE == 'binance':
+            self.api = BinanceAPI()
+        else:
+            self.api = BitkubAPI()
         self.logger = logging.getLogger(__name__)
 
     def fetch_ohlcv(self, limit=100):

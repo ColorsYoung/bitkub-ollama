@@ -20,14 +20,22 @@ logging.basicConfig(
 logger = logging.getLogger("TradingBot")
 
 def run_bot():
-    logger.info("Initializing Bitkub AI Trading Bot...")
+    logger.info(f"Initializing {settings.EXCHANGE.upper()} AI Trading Bot...")
     
+    # Resolve active credentials based on settings.EXCHANGE
+    if settings.EXCHANGE == 'binance':
+        api_key = settings.BINANCE_API_KEY
+        api_secret = settings.BINANCE_API_SECRET
+    else:
+        api_key = settings.BITKUB_API_KEY
+        api_secret = settings.BITKUB_API_SECRET
+        
     # Initialize Engines
     market_engine = MarketEngine(settings.TRADING_SYMBOL, settings.TIMEFRAME)
     ai_engine = AIEngine(settings.OLLAMA_URL)
     execution_engine = ExecutionEngine(
-        settings.BITKUB_API_KEY, 
-        settings.BITKUB_API_SECRET, 
+        api_key, 
+        api_secret, 
         settings.TRADING_SYMBOL
     )
     
@@ -69,8 +77,8 @@ def run_bot():
                 notifier.send_notification(action, latest_price, confidence, reasoning)
 
             # 4. Execute Trade
-            if settings.BITKUB_API_KEY and settings.BITKUB_API_SECRET:
-                order = execution_engine.execute_trade(decision, settings.TRADE_AMOUNT_THB, latest_price)
+            if api_key and api_secret:
+                order = execution_engine.execute_trade(decision, settings.TRADE_AMOUNT, latest_price)
                 if order:
                     logger.info(f"Order Executed Successfully: {order['id']}")
             else:
