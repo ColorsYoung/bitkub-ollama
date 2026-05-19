@@ -46,16 +46,16 @@ class AIEngine:
            - OVEREXTENDED: Price is > 1% away from EMA 21 (Reversion risk for M5).
 
         [DECISION MATRIX]
-        - ACTION "BUY": 
-            - PRIMARY: Trend Status is UP + MACD Bullish Crossover + Price > EMA 9.
-            - SCALPING (Aggressive): RSI < 35 (Oversold) + High Volume + Histogram increasing (turning positive) even if Trend is still DOWN.
-        - ACTION "SELL":
-            - Trend Status is DOWN + MACD Bearish Crossover + Current Price < EMA 9.
-            - EMERGENCY EXIT: Price breaks below EMA 21 or MACD Bearish Cross happens while Trend is UP.
+        - ACTION "BUY" (Must output exactly "BUY"): 
+            - Condition 1: Trend Status is UP + MACD Bullish Crossover + Price > EMA 9.
+            - Condition 2: RSI < 35 (Oversold) + High Volume + Histogram increasing (turning positive) even if Trend is still DOWN.
+        - ACTION "SELL" (Must output exactly "SELL"):
+            - Condition 1: Trend Status is DOWN + MACD Bearish Crossover + Current Price < EMA 9.
+            - Condition 2 (STOP LOSS): If holding a position and price is dropping, prioritize capital preservation.
             - NOTE: A hard 5% Take Profit is also active in the system, so focus on entering high-momentum moves.
-        - ACTION "HOLD":
-            - Low Volume + Neutral MACD.
-            - Price is overlapping EMA 9 and 21.
+        - ACTION "HOLD" (Must output exactly "HOLD"):
+            - Condition 1: Low Volume + Neutral MACD.
+            - Condition 2: Price is overlapping EMA 9 and 21.
 
         [OUTPUT SPECIFICATION]
         - You must output ONLY a valid JSON object.

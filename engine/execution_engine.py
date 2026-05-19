@@ -45,6 +45,11 @@ class ExecutionEngine:
                     # action is BUY (meaning AI is still very bullish)
                     self.logger.info(f"🚀 PROFIT TARGET MET ({profit_pct:.2f}%) but AI is BULLISH. Trailing for more gains...")
                     # We continue to HOLD
+                    
+            # Check for Stop Loss (Hard Logic: -2.5% Loss)
+            elif profit_pct <= -2.5:
+                self.logger.warning(f"🚨 STOP LOSS TRIGGERED! Loss: {profit_pct:.2f}% | Entry: {self.state['last_buy_price']} | Current: {current_price}")
+                return self.sell_market()
 
         # 2. Asymmetrical Thresholds for AI Signals
         if action == "BUY":
