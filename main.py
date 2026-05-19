@@ -7,12 +7,28 @@ from engine.ai_engine import AIEngine
 from engine.execution_engine import ExecutionEngine
 from engine.notifier_engine import LINEPusher
 
+from logging.handlers import RotatingFileHandler
+
 # Setup Logging
+# Clean/truncate the log file on startup to keep it fresh
+try:
+    with open("bot.log", "w") as f:
+        f.truncate(0)
+except Exception:
+    pass
+
+file_handler = RotatingFileHandler(
+    "bot.log",
+    maxBytes=2 * 1024 * 1024,  # Rotate at 2MB
+    backupCount=1,             # Keep only 1 backup file
+    encoding="utf-8"
+)
+
 logging.basicConfig(
     level=settings.LOG_LEVEL,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler("bot.log"),
+        file_handler,
         logging.StreamHandler(sys.stdout)
     ]
 )
